@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KAMNI IA">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>KAMNI IA</title>
+<style>
+:root{--bg:#eef2f7;--surface:#fff;--ink:#1b2a41;--muted:#5d6b80;--accent:#0f6b8a;--on-accent:#fff;--bubble:#dfe8f1;--line:#cfd9e5;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10202e;--surface:#182c3d;--ink:#e8eff6;--muted:#9fb1c4;--accent:#5cc0e0;--on-accent:#0b1b27;--bubble:#22394d;--line:#2d475d;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Helvetica Neue",Arial,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.3px}
+button,select,input,textarea{font:inherit;color:inherit}
+.icon{background:none;border:0;font-size:22px;padding:6px;cursor:pointer}
+nav{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto}
+nav button{flex:1;white-space:nowrap;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600}
+main{flex:1;min-height:0;position:relative}
+.panel{display:none;height:100%;flex-direction:column}
+.panel.on{display:flex}
+.msgs{flex:1;overflow-y:auto;padding:8px 16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-wrap:break-word}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--on-accent);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:var(--bubble);border-bottom-left-radius:4px}
+.msg.err{align-self:center;background:transparent;color:#c0392b;text-align:center;font-size:14px}
+.msg .say{display:block;margin-top:6px;background:none;border:0;color:var(--muted);font-size:13px;padding:0;cursor:pointer}
+.empty{margin:auto;color:var(--muted);text-align:center;padding:0 24px}
+.chips{display:flex;gap:6px;padding:0 12px 6px;overflow-x:auto}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;white-space:nowrap}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.bar{display:flex;gap:8px;padding:8px 12px 12px;align-items:flex-end}
+.bar textarea{flex:1;resize:none;max-height:120px;border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:10px 14px}
+.round{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:20px;cursor:pointer;flex:none}
+.round.go{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.round.rec{background:#c0392b;color:#fff;border-color:#c0392b}
+.form{padding:8px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.form textarea,.form select{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px}
+.form textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.btn{border:0;background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px;font-weight:600;cursor:pointer}
+.btn.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.out{background:var(--bubble);border-radius:12px;padding:12px;white-space:pre-wrap;min-height:60px}
+.out img{max-width:100%;border-radius:10px;display:block}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);width:min(92vw,420px)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;margin:6px 0 12px}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>KAMNI IA</h1>
+  <button class="icon" id="openSet" aria-label="Réglages">⚙️</button>
+</header>
+<nav role="tablist" id="tabs">
+  <button role="tab" data-t="chat" aria-selected="true">Chat</button>
+  <button role="tab" data-t="study" aria-selected="false">Études</button>
+  <button role="tab" data-t="trad" aria-selected="false">Traduction</button>
+  <button role="tab" data-t="img" aria-selected="false">Images</button>
+</nav>
+<main>
+  <section class="panel on" id="p-chat">
+    <div class="msgs" id="m-chat"><div class="empty">Pose-moi n’importe quelle question, à l’écrit ou avec le micro.</div></div>
+    <div class="bar">
+      <button class="round" data-mic="i-chat" aria-label="Dicter">🎤</button>
+      <textarea id="i-chat" rows="1" placeholder="Écris ton message"></textarea>
+      <button class="round go" data-send="chat" aria-label="Envoyer">➤</button>
+    </div>
+  </section>
+
+  <section class="panel" id="p-study">
+    <div class="chips" id="modes">
+      <button aria-pressed="true" data-mode="explain">Expliquer</button>
+      <button aria-pressed="false" data-mode="summary">Résumer</button>
+      <button aria-pressed="false" data-mode="quiz">Quiz</button>
+      <button aria-pressed="false" data-mode="cards">Fiches</button>
+    </div>
+    <div class="msgs" id="m-study"><div class="empty">Donne un sujet ou colle ton cours, puis choisis un mode.</div></div>
+    <div class="bar">
+      <button class="round" data-mic="i-study" aria-label="Dicter">🎤</button>
+      <textarea id="i-study" rows="1" placeholder="Sujet ou texte de cours"></textarea>
+      <button class="round go" data-send="study" aria-label="Envoyer">➤</button>
+    </div>
+  </section>
+
+  <section class="panel" id="p-trad">
+    <div class="form">
+      <div class="row">
+        <select id="t-from" aria-label="Langue source"></select>
+        <select id="t-to" aria-label="Langue cible"></select>
+      </div>
+      <textarea id="t-in" placeholder="Texte à traduire"></textarea>
+      <div class="row">
+        <button class="btn alt" data-mic="t-in">🎤 Dicter</button>
+        <button class="btn" id="t-go">Traduire</button>
+      </div>
+      <div class="out" id="t-out"></div>
+      <button class="btn alt" id="t-say">🔊 Écouter la traduction</button>
+    </div>
+  </section>
+
+  <section class="panel" id="p-img">
+    <div class="form">
+      <textarea id="g-in" placeholder="Décris l’image (ex. : un chat astronaute sur la lune, style aquarelle)"></textarea>
+      <button class="btn" id="g-go">Générer l’image</button>
+      <div class="out" id="g-out"><small>L’image apparaîtra ici. Appuie longuement dessus pour l’enregistrer.</small></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="setDlg">
+  <h2 style="margin-top:0;font-size:18px">Réglages</h2>
+  <label>Clé API Gemini
+    <input id="keyIn" type="password" placeholder="Colle ta clé ici" autocomplete="off">
+  </label>
+  <small>Gratuite sur aistudio.google.com. Elle reste enregistrée sur cet appareil seulement.</small>
+  <div class="row" style="margin-top:14px">
+    <button class="btn alt" id="setClose">Annuler</button>
+    <button class="btn" id="setSave">Enregistrer</button>
+  </div>
+</dialog>
+
+<script>
+const MODEL = 'gemini-2.5-flash';
+const $ = s => document.querySelector(s);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+
+/* ---------- Appel à l’IA ---------- */
+async function gemini(system, contents){
+  const key = store.get('kamni_key');
+  if(!key){ $('#setDlg').showModal(); throw new Error('Ajoute ta clé API dans les réglages ⚙️.'); }
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':key},
+    body: JSON.stringify({ systemInstruction:{parts:[{text:system}]}, contents })
+  });
+  const d = await r.json();
+  if(!r.ok) throw new Error((d.error && d.error.message) || ('Erreur ' + r.status));
+  const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+  return parts ? parts.map(p => p.text || '').join('') : '(réponse vide)';
+}
+
+/* ---------- Voix ---------- */
+function speak(text, lang){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang || 'fr-FR';
+  speechSynthesis.speak(u);
+}
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function dictate(btn, targetId, lang){
+  if(!SR){ alert('La dictée n’est pas disponible ici. Utilise le micro du clavier iPhone.'); return; }
+  if(rec){ rec.stop(); return; }
+  rec = new SR();
+  rec.lang = lang || 'fr-FR';
+  rec.interimResults = false;
+  btn.classList.add('rec');
+  rec.onresult = e => { const t = $('#' + targetId); t.value = (t.value + ' ' + e.results[0][0].transcript).trim(); };
+  rec.onend = () => { btn.classList.remove('rec'); rec = null; };
+  rec.onerror = () => { btn.classList.remove('rec'); rec = null; };
+  rec.start();
+}
+document.querySelectorAll('[data-mic]').forEach(b => b.onclick = () => {
+  const lang = b.dataset.mic === 't-in' ? ($('#t-from').value === 'auto' ? 'fr-FR' : LANGS[$('#t-from').value]) : 'fr-FR';
+  dictate(b, b.dataset.mic, lang);
+});
+
+/* ---------- Onglets ---------- */
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t));
+});
+
+/* ---------- Chat & Études ---------- */
+const SYS = {
+  chat: 'Tu es KAMNI IA, un assistant amical et clair. Réponds dans la langue de l’utilisateur, de façon concise et utile.',
+  explain: 'Tu es un professeur patient. Explique le sujet simplement, avec un exemple concret, puis un court récapitulatif.',
+  summary: 'Résume le texte ou le sujet en points essentiels courts et structurés.',
+  quiz: 'Crée un quiz de 5 questions à choix multiples sur le sujet. Donne les réponses correctes à la fin, après une ligne de séparation.',
+  cards: 'Crée 6 fiches de révision au format « Question : … / Réponse : … » sur le sujet.'
+};
+let mode = 'explain';
+document.querySelectorAll('#modes button').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('#modes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+const history = { chat: [], study: [] };
+
+function addMsg(box, cls, text){
+  const e = box.querySelector('.empty'); if(e) e.remove();
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  if(cls === 'ai'){
+    const s = document.createElement('button');
+    s.className = 'say'; s.textContent = '🔊 Écouter';
+    s.onclick = () => speak(text);
+    d.appendChild(s);
+  }
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+async function send(kind){
+  const input = $('#i-' + kind), box = $('#m-' + kind);
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  addMsg(box, 'me', text);
+  history[kind].push({ role:'user', parts:[{text}] });
+  const wait = addMsg(box, 'ai', '…');
+  try {
+    const sys = kind === 'chat' ? SYS.chat : SYS[mode];
+    const reply = await gemini(sys, history[kind].slice(-12));
+    history[kind].push({ role:'model', parts:[{text:reply}] });
+    wait.remove();
+    addMsg(box, 'ai', reply);
+  } catch(err){
+    history[kind].pop();
+    wait.remove();
+    addMsg(box, 'err', err.message);
+  }
+}
+document.querySelectorAll('[data-send]').forEach(b => b.onclick = () => send(b.dataset.send));
+['chat','study'].forEach(k => $('#i-' + k).addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(k); }
+}));
+
+/* ---------- Traduction ---------- */
+const LANGS = { 'français':'fr-FR','anglais':'en-US','espagnol':'es-ES','arabe':'ar-SA','allemand':'de-DE','italien':'it-IT','portugais':'pt-PT','chinois':'zh-CN','japonais':'ja-JP' };
+$('#t-from').innerHTML = '<option value="auto">Détecter la langue</option>' + Object.keys(LANGS).map(l => '<option>' + l + '</option>').join('');
+$('#t-to').innerHTML = Object.keys(LANGS).map(l => '<option' + (l === 'anglais' ? ' selected' : '') + '>' + l + '</option>').join('');
+$('#t-go').onclick = async () => {
+  const text = $('#t-in').value.trim(); if(!text) return;
+  const from = $('#t-from').value, to = $('#t-to').value;
+  $('#t-out').textContent = '…';
+  try {
+    const sys = 'Tu es un traducteur professionnel. Traduis ' + (from === 'auto' ? '' : 'du ' + from + ' ') + 'vers le ' + to + '. Réponds uniquement avec la traduction, sans commentaire.';
+    $('#t-out').textContent = await gemini(sys, [{ role:'user', parts:[{text}] }]);
+  } catch(err){ $('#t-out').textContent = err.message; }
+};
+$('#t-say').onclick = () => speak($('#t-out').textContent, LANGS[$('#t-to').value]);
+
+/* ---------- Images (Pollinations, gratuit) ---------- */
+$('#g-go').onclick = () => {
+  const p = $('#g-in').value.trim(); if(!p) return;
+  const out = $('#g-out');
+  out.innerHTML = '<small>Création en cours…</small>';
+  const img = new Image();
+  img.alt = p;
+  img.onload = () => { out.innerHTML = ''; out.appendChild(img); };
+  img.onerror = () => { out.innerHTML = '<small>La génération a échoué. Réessaie dans un instant.</small>'; };
+  img.src = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(p) + '?width=768&height=768&nologo=true&seed=' + Date.now();
+};
+
+/* ---------- Réglages ---------- */
+$('#openSet').onclick = () => { $('#keyIn').value = store.get('kamni_key') || ''; $('#setDlg').showModal(); };
+$('#setClose').onclick = () => $('#setDlg').close();
+$('#setSave').onclick = () => { store.set('kamni_key', $('#keyIn').value.trim()); $('#setDlg').close(); };
+if(!store.get('kamni_key')) setTimeout(() => $('#setDlg').showModal(), 400);
+</script>
+</body>
+</html>
